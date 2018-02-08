@@ -1,5 +1,8 @@
 /*
 <metadata description="A grid of notes with MPE compatibility and scale settings for use with melodic instruments. Press the Mode button to scroll through different size grids" target="Lightpad" tags="Default;MPE;MIDI;Melodic">
+<modes>
+  <mode name="Default"/>
+</modes>
 </metadata>
 */
 
@@ -41,7 +44,7 @@
 */
 //==============================================================================
 
-int gridSize, padWidth, padSpacing;
+int colSize, padWidth, colSpacing, rowSize, padHeight, rowSpacing, mode, offset, timeStart, cs64;
 int dimFactor, dimDelay, dimDelta;
 int scaleBitmask;
 int numNotesInScale;
@@ -97,6 +100,54 @@ int PitchCorrect_getStartTime (int touchIndex)          { return getHeapInt ((to
 void PitchCorrect_setStartTime (int touchIndex, int timeMs) { setHeapInt ((touchIndex * 4) + 365, timeMs); }
 float PitchCorrect_getLastTargetX (int touchIndex)      { return float (getHeapInt ((touchIndex * 4) + 461)) / 1e6; }
 void PitchCorrect_setLastTargetX (int touchIndex, float targetX) { setHeapInt ((touchIndex * 4) + 461, int (targetX * 1e6)); }
+
+void draw(int img, int rgb, int x, int y, int w, int h)
+{
+    int p00 = 1 << w * h - 1;
+    if (!p00) return;
+    
+    int i = 0;
+    for (int py = 0; py < h; ++py)
+	{
+		for (int px = 0; px < w; ++px)
+		{
+		    if ((p00 >> i++) & img) fillPixel (rgb, x + px, y + py);
+		}
+	}
+}
+
+void panic()
+{
+    for (int ch = 0; ch < 16; ++ch)
+    {
+        for (int note = 0; note < 128; ++note)
+        {
+            sendNoteOff(ch, note, 127);
+        }
+    }
+}
+
+int getColour(int note)
+{
+    int c;
+    
+    note %= 12;
+    
+    if      (note == 0)  c = 0xffff0000;
+    else if (note == 1)  c = 0xffbf3f00;
+    else if (note == 2)  c = 0xff7f7f00;
+    else if (note == 3)  c = 0xff3fbf00;
+    else if (note == 4)  c = 0xff00ff00;
+    else if (note == 5)  c = 0xff00bf3f;
+    else if (note == 6)  c = 0xff007f7f;
+    else if (note == 7)  c = 0xff003fbf;
+    else if (note == 8)  c = 0xff0000ff;
+    else if (note == 9)  c = 0xff3f00bf;
+    else if (note == 10) c = 0xff7f007f;
+    else if (note == 11) c = 0xffbf003f;
+    
+    return c;
+}
 
 float PitchCorrect_updateX (int touchIndex, float newX)
 {
@@ -165,23 +216,26 @@ int findNthNoteInScale (int n)
 //==============================================================================
 int getTouchedPad (float x, float y)
 {
-	int col = int (x * 0.5 * float (gridSize));
-	int row = int (y * 0.5 * float (gridSize));
+	int col = int (x * 0.5 * float (colSize));
+	int row = int (y * 0.5 * float (rowSize));
 
-	return (gridSize * row) + col;
+	return (colSize * row) + col;
 }
 
 //==============================================================================
 int getNoteForPad (int padIndex)
 {
     // convert pad index (starting top left) to index in note sequence (starting bottom left):
-    int padRow = padIndex / gridSize;
-    int padCol = padIndex % gridSize;
-    int noteIndex = ((gridSize - 1) - padRow) * gridSize + padCol;
+    int padRow = padIndex / colSize;
+    int padCol = padIndex % rowSize;
+    int noteIndex = ((colSize - 1) - padRow) * colSize + padCol;
     int lowestNoteIndex = (octave * 12) + tonic + 48  + transpose;
     int topologyShift, scaleShift;
+    
+    //if (mode == 6) { noteIndex = ((colSize - 1) - padRow) * (colSize + 1) + padCol; return noteIndex + lowestNoteIndex; }
+    if (mode < 7) return lowestNoteIndex + padIndex;
 
-    if (gridSize == 5 )
+    if (colSize == 5)
     {
         topologyShift = (xShift * 5) + (yShift * 25);
  
@@ -202,9 +256,9 @@ int getNoteForPad (int padIndex)
     else
     {
         // Drum grid            
-        int notesPerRow = getClusterWidth() * gridSize;
+        int notesPerRow = getClusterWidth() * colSize;
 
-        return lowestNoteIndex + (xShift * gridSize) + padCol + (((gridSize - 1) - padRow) * notesPerRow) + (yShift * notesPerRow * gridSize);
+        return lowestNoteIndex + (xShift * colSize) + padCol + (((colSize - 1) - padRow) * notesPerRow) + (yShift * notesPerRow * colSize);
     }
 
     if (! hideMode)
@@ -225,10 +279,18 @@ int roundDownDivide (int a, int b)
 //==============================================================================
 int getTrailColour (int padColour)
 {
-    if (padColour == 0xff000000)
-        return 0xffaaaaaa;
+    //if (padColour == 0xff000000)
+        //return 0xffaaaaaa;
 
-    return blendARGB (0xFFFFFFFF, padColour);
+    return 0xff006666;//return blendARGB (0xffffffff, 0xffffffff - padColour);//return blendARGB (0xFFFFFFFF, padColour);
+}
+
+int getTrailColourV (int padColour)
+{
+    //if (padColour == 0xff000000)
+        //return 0xffaaaaaa;
+
+    return 0xff333333;//return blendARGB (0xffffffff, 0xffffffff - padColour);//return blendARGB (0xFFFFFFFF, padColour);
 }
 
 //==============================================================================
@@ -237,12 +299,12 @@ void updateDimFactor()
 	if (isAnyPadActive() || dimDelta)
 	{
 	    if (dimFactor < 180)
-	        dimDelta = 60;
+	        dimDelta = 0;//60;
 	    else
 	        dimDelta = 0;
 
 		dimFactor += dimDelta;
-		dimDelay = 8;
+		dimDelay = 0;//8;
 	}
 	else
 	{
@@ -259,7 +321,7 @@ void updateDimFactor()
 //==============================================================================
 bool drawAbsolutePad ()
 {
-    if (gridSize != 1)
+    if (mode != 1)
         return false;
 
     int high = 0xff366CC5;
@@ -281,8 +343,9 @@ void drawPad (int x, int y, int colour, int bottomRightCornerDarkeningAmount)
     int dark = blendARGB (colour, bottomRightCornerDarkeningAmount << 24);
     int mid  = blendARGB (colour, (bottomRightCornerDarkeningAmount / 2) << 24);
 
-    int w = padWidth - padSpacing;
-    blendGradientRect (colour, mid, dark, mid, x * padWidth, y * padWidth, w, w);
+    int w = padWidth - colSpacing;
+    int h = padHeight - rowSpacing;
+    blendGradientRect (colour, mid, dark, mid, x * padWidth, y * padHeight, w, h);
 }
 
 void drawPads()
@@ -292,11 +355,11 @@ void drawPads()
     if (drawAbsolutePad())
         return;
 
-	for (int padY = 0; padY < gridSize; ++padY)
+	for (int padY = 0; padY < rowSize; ++padY)
 	{
-		for (int padX = 0; padX < gridSize; ++padX)
+		for (int padX = 0; padX < colSize; ++padX)
 		{
-		    int overlayColour = Pad_isActive (padIndex) && gridSize > 1 ? 0x66ffffff : (dimFactor << 24);
+		    int overlayColour = Pad_isActive (padIndex) && mode > 1 ? 0x66ffffff : (dimFactor << 24);
 
             drawPad (padX, padY, blendARGB (Pad_getColour (padIndex), overlayColour), 0xcc);
 
@@ -310,23 +373,6 @@ void drawPads()
 void initialiseScale()
 {
 	if (scale == 0)        scaleBitmask = 0xab5;  // major
-	else if (scale == 1)   scaleBitmask = 0x5ad;  // minor
-	else if (scale == 2)   scaleBitmask = 0x9ad;  // harmonic minor
-	else if (scale == 3)   scaleBitmask = 0x4a5;  // pentatonic neutral
-	else if (scale == 4)   scaleBitmask = 0x295;  // pentatonic major
-	else if (scale == 5)   scaleBitmask = 0x4a9;  // pentatomic minor
-	else if (scale == 6)   scaleBitmask = 0x4e9;  // blues
-	else if (scale == 7)   scaleBitmask = 0x6ad;  // dorian
-	else if (scale == 8)   scaleBitmask = 0x5ab;  // phrygian
-	else if (scale == 9)   scaleBitmask = 0xad5;  // lydian
-	else if (scale == 10)  scaleBitmask = 0x6b5;  // mixolydian
-	else if (scale == 11)  scaleBitmask = 0x56b;  // locrian
-	else if (scale == 12)  scaleBitmask = 0x555;  // whole tone
-	else if (scale == 13)  scaleBitmask = 0xb6d;  // arabic (A)
-	else if (scale == 14)  scaleBitmask = 0x575;  // arabic (B)
-	else if (scale == 15)  scaleBitmask = 0x8d1;  // japanese
-	else if (scale == 16)  scaleBitmask = 0x8b1;  // ryukyu
-	else if (scale == 17)  scaleBitmask = 0x57b;  // 8-tone spanish
 	else                   scaleBitmask = 0xfff;  // chromatic
 
     int n = scaleBitmask;
@@ -338,66 +384,21 @@ void initialiseScale()
 }
 
 //==============================================================================
-bool setDrumModePadColours()
-{
-    if (gridSize == 5)
-        return false;
-
-    int numPads = gridSize * gridSize;
-
-    for (int i = 0; i < numPads; ++i)
-    {
-        int note = getNoteForPad (i);
-        Pad_setNote (i, note);
-    }
-
-    if (gridSize == 1)
-        Pad_setColour (0, 0xff366CC5);
-    else if (gridSize == 2)
-    {
-        Pad_setColour (0, 0xffad64fb);
-        Pad_setColour (1, 0xff54e8fd);
-        Pad_setColour (2, 0xff3f89fb);
-        Pad_setColour (3, 0xff3c57fb);
-    }
-    else if (gridSize == 3 || gridSize == 4)
-    {
-        Pad_setColour (0, 0xff4dfcf0);
-        Pad_setColour (1, 0xff4b5eed);
-        Pad_setColour (2, 0xff9850e6);
-        Pad_setColour (3, 0xfff8676e);
-        Pad_setColour (4, 0xff4de7fc);
-        Pad_setColour (5, 0xff645fed);
-        Pad_setColour (6, 0xffc35ce6);
-        Pad_setColour (7, 0xfff87966);
-        Pad_setColour (8, 0xff4fbbf7);
-        Pad_setColour (9, 0xff8152f8);
-        Pad_setColour (10, 0xffe673d2);
-        Pad_setColour (11, 0xfffca76a);
-        Pad_setColour (12, 0xff4288f7);
-        Pad_setColour (13, 0xff8543f8);
-        Pad_setColour (14, 0xffe36d94);
-        Pad_setColour (15, 0xfffac769);
-    }
-
-    return true;
-}
-
-//==============================================================================
 void initialisePads()
 {
-    padWidth = 15 / gridSize;
-	padSpacing = gridSize > 1 ? (15 - gridSize * padWidth) / (gridSize - 1) : 0;
-	padWidth += padSpacing;
+    padWidth = 15 / colSize;
+	colSpacing = colSize > 1 ? (15 - colSize * padWidth) / (colSize - 1) : 0;
+	padWidth += colSpacing;
+    padHeight = 15 / rowSize;
+    rowSpacing = rowSize > 1 ? (15 - rowSize * padHeight) / (rowSize - 1) : 0;
+    padHeight += rowSpacing;
 	dimFactor = 0;
 	dimDelay = 12;
 	activePads = 0;
 
+    int numPads = rowSize * colSize;
 
-	if (setDrumModePadColours())
-	    return;
-
-    for (int padIndex = 0; padIndex < 25; ++padIndex)
+    for (int padIndex = 0; padIndex < numPads; ++padIndex)
 	{
         // note numbers:
         int note = getNoteForPad (padIndex);
@@ -406,11 +407,12 @@ void initialisePads()
         Pad_setNote (padIndex, note);
 
         // pad colours:
-		int padColour = 0xffffffff;   // tonic = white
+		int padColour = 0xffff0000;//0xffffffff;   // tonic = white
 
-		int noteInScale = mod (note - (tonic + transpose), 12);
+		int noteInScale = mod (note - tonic, 12);
+		//int noteInScale = mod (note - (tonic + transpose), 12);
 
-     	if (noteInScale != 0)
+     	if (noteInScale != 0 && noteInScale != 2 && noteInScale != 4)
 		{
 		    // not the tonic!
 
@@ -420,12 +422,14 @@ void initialisePads()
 			}
 		    else
 			{
-				int blend = 0xff * (noteInScale - 1) / 10;
+				//int blend = 0xff * (noteInScale - 1) / 10;
 
-				padColour = blendARGB (gradientColour1 | 0xff000000,
-				                       (gradientColour2 & 0x00ffffff) | (blend << 24));
+				padColour = 0xff333300;//blendARGB (gradientColour1 | 0xff000000,
+				                       //(gradientColour2 & 0x00ffffff) | (blend << 24));
 			}
 		}
+		
+		if (mode < 7) padColour = getColour(note);
 
         Pad_setColour (padIndex, padColour);
 	}
@@ -457,20 +461,31 @@ void initialiseConfig()
 
     setLocalConfigItemRange (4, -4, 6);
 	setLocalConfigItemRange (7, 0, 2);
-	setLocalConfigItemRange (20, 1, 5);
+	setLocalConfigItemRange (20, 1, 6);
 	setLocalConfigItemRange (22, 0, 18);
 
-	gridSize = getLocalConfig(20);
+	setLocalConfigItemRange (64, 0, 1);
+	setLocalConfigItemRange (65, 1, 5);
+	setLocalConfigItemRange (66, 1, 5);
+	cs64 = getLocalConfig(64);
+	//colSize = getLocalConfig(65);
+	//rowSize = getLocalConfig(66);
+	
+	mode = getLocalConfig(20);
+	if (mode < 6) { colSize = rowSize = offset = mode; }
+	else if (mode == 6) { colSize = 5; rowSize = 3; offset == mode;}
+	octave = getLocalConfig(4);
+	transpose = getLocalConfig(5);
+	pitchbendRange = getLocalConfig(3);
+	
 	updateTopologyShift();
 
-    pitchbendRange = getLocalConfig(3);
 	gradientColour1 = 0x7199ff;
 	gradientColour2 = 0x6fe6ff;
-	octave = getLocalConfig(4);
 	pitchCorrectTime = 0.2;
-	tonic = 0;
-	scale = 0;
-	hideMode = false;
+//	tonic = 0;
+//	scale = 0;
+//	hideMode = false;
 }
 
 void initialiseGlideLock()
@@ -506,8 +521,20 @@ void initialise()
 	setLocalConfigActiveState (30, true, true);
 	setLocalConfigActiveState (31, true, true);
 	setLocalConfigActiveState (32, true, true);
+	setLocalConfigActiveState (21, true, true);
+	setLocalConfigActiveState (64, true, true);
+	setLocalConfigActiveState (65, true, true);
+	setLocalConfigActiveState (66, true, true);
 	
 	initialiseConfig();
+
+    if (cs64) initialiseCtrl();
+
+    initialisePlay();
+}
+
+void initialisePlay()
+{
 	initialiseScale();
 	initialisePads();
 	initialiseTouches();
@@ -517,6 +544,10 @@ void initialise()
 	useMPEDuplicateFilter (true);
 }
 
+void initialiseCtrl()
+{
+    
+}
 
 
 //==============================================================================
@@ -524,18 +555,110 @@ void repaint()
 { 
     checkConfigUpdates();
 
-    if (gridSize == 5)
+    if (mode > 4)
         updatePitchCorrection();
 
 	clearDisplay();
 	updateDimFactor();
 
 	if (isConnectedToHost())
-        drawPads();
+    {
+        if (!cs64) drawPads();
+        else drawCtrl();
+    }
 
     // Overlay heatmap
     drawPressureMap();
     fadePressureMap();
+    //logHex(0xff - 0x3f);
+}
+
+void drawCtrl()
+{
+    for (int index = 0; index < 13; ++index)
+    {
+        draw(0x5210, getColour(index), 0, index, 15, 1);
+    }
+}
+
+void handleButtonDown (int index)
+{
+    timeStart = getMillisecondCounter();
+    if (index == 0)
+    {
+        cs64 = cs64 ? 0 : 1;
+        setLocalConfig (64, cs64);
+        //sendConfigItemToCluster (64);
+        if (!cs64) initialisePlay();
+        else initialiseCtrl();
+        
+//         if (getNumBlocksInCurrentCluster() > 1)
+//         {
+//             if (getClusterIndex() > 0)
+//             {
+//                 cs66 = 1;
+//                 if (cs65 == 1)
+//                 {
+//                     transpose++;
+//                 }
+//                 else
+//                 {
+//                 //cs64 = 1;
+//                 //gridSize = 5;
+//                 }
+//             }
+//             else
+//             {
+//                 cs65 = 1;
+//                 if (cs66 == 1)
+//                 {
+//                     transpose--;
+//                 }
+//                 else
+//                 {
+//                     if (cs64 == 1)
+//                     {
+//                         cs64 = 0;
+//                         gridSize = 1;
+//                     }
+//                     else if (gridSize == 5)
+//                     {
+//                         cs64 = 1;
+//                     }
+//                     else
+//                     {
+//                         gridSize++;
+//                     }
+//                 }
+//             }
+//         }
+//         
+//         setLocalConfig (5, transpose);
+//         setLocalConfig (64, cs64);
+//         setLocalConfig (65, cs65);
+//         setLocalConfig (66, cs66);
+//         setLocalConfig (20, gridSize);
+//         initialiseScale();
+//         initialisePads ();
+//         sendConfigItemToCluster (20);
+//         sendConfigItemToCluster (64);
+//         sendConfigItemToCluster (65);
+//         sendConfigItemToCluster (66);
+//         sendConfigItemToCluster (5);
+    }
+}
+
+void handleButtonUp (int index)
+{
+    int timeSpent = getMillisecondCounter() - timeStart;
+    if (index == 0)
+    {
+        if (timeSpent > 250 && cs64)
+        {
+            cs64 = 0;
+            setLocalConfig (64, cs64);
+        }
+    }
 }
 
 //==============================================================================
@@ -551,10 +674,10 @@ int getAbsPitch (int touchIndex, float x)
 int getPitchwheelValue (int touchIndex, float x)
 {
     float initialX = Touch_getInitialX (touchIndex);
-    float scaler = (2.1 * float (gridSize) / 5.0);
+    float scaler = (2.1 * float (colSize) / 5.0);
     float deltaX = transformPitchForHideMode (touchIndex, scaler * (x - initialX));
 
-    if (gridSize == 5)
+    if (colSize == 5)
 	    deltaX = handlePitchCorrection (touchIndex, deltaX);
 
 	return getPitchWheelFromDeltaX (deltaX);
@@ -586,13 +709,13 @@ float transformPitchForHideMode (int touchIndex, float deltaX)
     // rows are incrementing when going down, not up!
     // if padIndexLeft/Right is outside of the edges of the block, you need
     // to explicitly add/subtract two rows to compensate.
-    if (mod (padIndexLeft, gridSize) == gridSize - 1)
+    if (mod (padIndexLeft, colSize) == colSize - 1)
     {
         if (deltaX < 0)
-            padIndexLeft += 2 * gridSize;
+            padIndexLeft += 2 * colSize;
 
         else if (deltaX > 0)
-            padIndexRight -= 2 * gridSize;
+            padIndexRight -= 2 * colSize;
     }
 
     float pitchLeft = getNoteForPad (padIndexLeft);
@@ -817,6 +940,8 @@ int getGlideLockDelta()
 //==============================================================================
 void touchStart (int touchIndex, float x, float y, float z, float vz)
 {
+    if (cs64) { touchStartCtrl(touchIndex, x, y, z, vz); return; }
+    
     int padIndex = getTouchedPad (x, y);
     int note = clamp (0, 127, Pad_getNote (padIndex));
     int colour = Pad_getColour (padIndex);
@@ -828,7 +953,7 @@ void touchStart (int touchIndex, float x, float y, float z, float vz)
 
     addTouchToList (touchIndex);
 
-    if (glideLockEnabled || ((glideLockValue > 0) && (gridSize > 1)))
+    if (glideLockEnabled || ((glideLockValue > 0) && (mode > 1)))
     {
         if (! glideLockEnabled)
         {
@@ -851,7 +976,7 @@ void touchStart (int touchIndex, float x, float y, float z, float vz)
     {
         if (pitchbendRange > 0)
         {
-            if (gridSize == 1)
+            if (mode == 1)
                 sendPitchBend (channel, getAbsPitch (touchIndex, x));
             else
                 sendPitchBend (channel, 8192);
@@ -867,7 +992,7 @@ void touchStart (int touchIndex, float x, float y, float z, float vz)
         sendNoteOn (channel, note, velocity);
     }
 
-    addPressurePoint (getTrailColour (colour), x, y, z * 32.0);
+    addPressurePoint (getTrailColourV (colour), x, y, vz * 127.0);
 
     Pad_setActive (padIndex, true);
 
@@ -883,8 +1008,37 @@ void touchStart (int touchIndex, float x, float y, float z, float vz)
     Channel_setTrackedTouch (channel, touchIndex);
 }
 
+void touchStartCtrl (int touchIndex, float x, float y, float z, float vz)
+{
+    int padIndex = getTouchedPad (x, y);
+    int note = clamp (0, 127, Pad_getNote (padIndex));
+    int colour = Pad_getColour (padIndex);
+    int channel = getControlChannel();
+    int velocity = clamp (1, 127, int (vz * 127.0));
+    int pressure = clamp (0, 127, int (z * 127.0));
+    int glideLockValue = getLocalConfig (18);
+    bool enableMidiNoteOn = true;
+
+    addTouchToList (touchIndex);
+    Touch_setInitialY (touchIndex, y);
+
+
+    addPressurePoint (0xffffff, x, y, vz * 8.0);
+
+    Pad_setActive (padIndex, true);
+
+    Touch_setPad (touchIndex, padIndex);
+    Touch_setInitialX (touchIndex, x);
+    Touch_setChannel (touchIndex, channel);
+    Touch_setVelocity (touchIndex, velocity);
+
+    Channel_setTrackedTouch (channel, touchIndex);
+}
+
 void touchMove (int touchIndex, float x, float y, float z, float vz)
 {
+    if (cs64) { return; }
+    
     int padIndex = Touch_getPad (touchIndex);
 
     if (padIndex == 0xff)
@@ -932,7 +1086,7 @@ void touchMove (int touchIndex, float x, float y, float z, float vz)
         {
             PitchCorrect_updateX (touchIndex, x);
 
-            if (gridSize == 1)
+            if (mode == 1)
                 sendPitchBend (channel, getAbsPitch (touchIndex, x));
             else if (glideLockEnabled)
                 sendPitchBend (channel, getPitchwheelValue (touchIndex, x) + getGlideLockDelta(), getGlideLockRate());
@@ -942,11 +1096,13 @@ void touchMove (int touchIndex, float x, float y, float z, float vz)
     }
 
     int colour = Pad_getColour (padIndex);
-    addPressurePoint (getTrailColour (colour), x, y, z * 32.0);
+    addPressurePoint (getTrailColour (colour), x, y, z * 8.0);
 }
 
 void touchEnd (int touchIndex, float x, float y, float z, float vz)
 {
+    if (cs64) { return; }
+    
     int padIndex = Touch_getPad (touchIndex);
 
     if (padIndex == 0xff)
@@ -997,22 +1153,6 @@ void touchEnd (int touchIndex, float x, float y, float z, float vz)
     removeTouchFromList (touchIndex);
 }
 
-void handleButtonDown (int index)
-{
-    if (index == 0)
-    {
-        if (++gridSize > 5) gridSize = 1;
-        if (gridSize == 3)  gridSize = 4;
-
-        setLocalConfig (20, gridSize);
-
-        initialiseScale();
-        initialisePads ();
-        sendConfigItemToCluster (20);
-    }
-}
-
-
 void updateTopologyShift ()
 {
     int xShiftLast = xShift;
@@ -1022,7 +1162,7 @@ void updateTopologyShift ()
     
     if (getClusterWidth() > 1)
     {
-        if (gridSize < 5)
+        if (mode < 5)
         {
             xShift = getClusterXpos();
         }
@@ -1039,7 +1179,7 @@ void updateTopologyShift ()
     
     if (getClusterHeight() > 1)
     {
-        if (gridSize < 5)
+        if (mode < 5)
         {
             yShift = getClusterYpos();
         }
@@ -1064,6 +1204,7 @@ void updateTopologyShift ()
         else if (! getClusterXpos())
             syncCluster();
 
+		initialiseConfig();
 		initialiseScale();
         initialisePads();
 
@@ -1098,6 +1239,9 @@ void syncCluster()
 
     for (int i = 20; i <= 23; ++i)
         sendConfigItemToCluster (i);
+        
+    for (int i = 65; i <= 95; ++i)
+        sendConfigItemToCluster (i);
 }
 
 void sendConfigItemToCluster (int itemId)
@@ -1120,9 +1264,10 @@ void checkConfigUpdates ()
         initialiseScale();
         initialisePads();
     }
-    if (gridSize != getLocalConfig (20))
+    if (mode != getLocalConfig (20))
     {
-        gridSize = getLocalConfig (20);
+        mode = getLocalConfig (20);
+        initialiseConfig();
         initialiseScale();
         initialisePads();
     }
@@ -1142,6 +1287,24 @@ void checkConfigUpdates ()
         transpose = getLocalConfig (5);
         initialisePads();
     }
-
+//     if (cs64 != getLocalConfig (64))
+//     {
+//         cs64 = getLocalConfig (64);
+//         initialiseScale();
+//         initialisePads();
+//     }
+// //     if (colSize != getLocalConfig (65))//     if (colSize != getLocalConfig (65))
+//     {
+//         colSize = getLocalConfig (65);
+//         initialiseScale();
+//         initialisePads();
+//     }
+//     if (rowSize != getLocalConfig (66))
+//     {
+//         rowSize = getLocalConfig (66);
+//         initialiseScale();
+//         initialisePads();
+//     }
+// 
     updateTopologyShift();
 }

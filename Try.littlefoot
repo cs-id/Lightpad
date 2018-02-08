@@ -1,0 +1,483 @@
+/*
+<metadata description="Description not specified" target="All" tags="" >
+<modes>
+  <mode name="Default"/>
+</modes>
+
+
+
+
+</metadata>
+*/
+
+int timeStart;
+bool clear;
+void save (int y, int x)           { setHeapInt (y * 4, x); }//
+
+void initialise()
+{
+    timeStart = getMillisecondCounter();
+    cluster();
+}
+
+void repaint()
+{
+    clearDisplay();
+    drawNumber(getClusterIndex(), 0xffff0000, 0, 0);
+    drawNumber(getClusterXpos(), 0xffff0000, 5, 0);
+    drawNumber(getClusterYpos(), 0xffff0000, 10, 0);
+    drawNumber(getAngleFromMaster(), 0xffff0000, 0, 5);
+    drawNumber(getHorizontalDistFromMaster(), 0xffff0000, 5, 5);
+    drawNumber(getVerticalDistFromMaster(), 0xffff0000, 10, 5);
+    drawNumber(getPortToMaster(), 0xffff0000, 0, 10);
+    drawNumber(getNumBlocksInTopology(), 0xffff0000, 5, 10);
+    drawNumber(getNumBlocksInCurrentCluster(), 0xffff0000, 10, 10);
+}
+
+void cluster()
+{
+    //log(int(isMasterBlock()));
+    //log(int(isMasterInCurrentCluster()));
+    //log(getClusterWidth());
+    //log(getClusterHeight());
+    //log(getClusterXpos());
+    //log(getClusterYpos());
+    log(getAngleFromMaster());
+    log(getHorizontalDistFromMaster());
+    log(getVerticalDistFromMaster());
+    log(getPortToMaster());
+    log(getBlockIDOnPort(getPortToMaster()));
+    log(getClusterIndex());
+    log(getBlockIDForIndex(getClusterIndex()));
+    log(getBlockIdForBlockInCluster(getClusterIndex()));
+    //log(getNumBlocksInTopology());
+    //log(getNumBlocksInCurrentCluster());
+}
+
+void handleButtonDown (int index)
+{
+    clear = true;
+    
+}
+void handleButtonUp (int index)
+{
+    clear = false;
+
+}
+
+void touchStart (int touchIndex, float x, float y, float z, float vz)
+{
+    addPressurePoint(0xffff0000, x,y,z*32);
+    log(int(x*1e2));
+}
+void touchMove (int touchIndex, float x, float y, float z, float vz)
+{
+    addPressurePoint(0xffff0000, x,y,z*2);
+}
+
+void repaint2()
+{
+    //log(getClusterIndex());
+    clearDisplay();
+    if (isConnectedToHost())
+    {
+
+            for (int index = 0; index < 13; ++index)
+                {
+                    //draw(0, getColor2(index), 0, index, 15, 1);
+                }
+
+    }
+    //draw(0x81800, 0x00ff0000, 0, 0, 7, 4);
+    //draw(0x18402080, 0xffff0000, 0, 0, 15, 2);//
+    int timeSpent = (getMillisecondCounter() - timeStart)/1000;
+    drawNumber(timeSpent, 0xffff0000, 0, 0);
+    //int counterDigit = (numCountdownTicks * msecPerCountdownTick - msecSinceStart) / msecPerCountdownTick + 1;
+    //int f = 0xffff0000;
+    //int b = 0xff000000;
+    //drawPressureMap();
+    //if (clear) fadePressureMap();
+    
+    //draw(0, 0xffff0000, 0xff000000);
+    
+    //fillRect(0xffff0000,0,0,3,5);
+    //int n = getMillisecondCounter();
+    //int x = n>9?0:2;
+    //drawNumber(n,0xffff0000,x,0);
+    //drawNumber(getMillisecondCounter()%1000/10,0xffff0000,x,5);
+    //drawNumber(n%1000,0xffff0000,x,10);
+    //draw(0,0xffff0000);
+    //int z = 12;
+    //log(getHeapBits(4*z,4));
+    //log(getHeapInt(0));    
+}
+
+int getColor(int note)
+{
+    int c;
+    
+    note %= 12;
+    
+    if      (note == 0)  c = 0xffff0000;
+    else if (note == 1)  c = 0xffbf3f00;
+    else if (note == 2)  c = 0xff7f7f00;
+    else if (note == 3)  c = 0xff3fbf00;
+    else if (note == 4)  c = 0xff00ff00;
+    else if (note == 5)  c = 0xff00bf3f;
+    else if (note == 6)  c = 0xff007f7f;
+    else if (note == 7)  c = 0xff003fbf;
+    else if (note == 8)  c = 0xff0000ff;
+    else if (note == 9)  c = 0xff3f00bf;
+    else if (note == 10) c = 0xff7f007f;
+    else if (note == 11) c = 0xffbf003f;
+    
+    return c;
+}
+int getColor2(int note)
+{
+    int c;
+    
+    note %= 12;
+    
+    if      (note == 0)  c = 0xffff0000;
+    else if (note == 1)  c = 0xffbf3f00;
+    else if (note == 2)  c = 0xff7f7f00;
+    else if (note == 3)  c = 0xff3fbf00;
+    else if (note == 4)  c = 0xff00ff00;
+    else if (note == 5)  c = 0xff00bf3f;
+    else if (note == 6)  c = 0xff007f7f;
+    else if (note == 7)  c = 0xff003fbf;
+    else if (note == 8)  c = 0xff0000ff;
+    else if (note == 9)  c = 0xff3f00bf;
+    else if (note == 10) c = 0xff7f007f;
+    else if (note == 11) c = 0xffbf003f;
+    
+    return c;
+}
+int getColour(int note)
+{
+    int c;
+    
+    note %= 12;
+    
+    if      (note == 0)  c = 0xffff0000;
+    else if (note == 1)  c = 0xffff7f00;
+    else if (note == 2)  c = 0xffffff00;
+    else if (note == 3)  c = 0xff7fff00;
+    else if (note == 4)  c = 0xff00ff00;
+    else if (note == 5)  c = 0xff00ff7f;
+    else if (note == 6)  c = 0xff00ffff;
+    else if (note == 7)  c = 0xff007fff;
+    else if (note == 8)  c = 0xff0000ff;
+    else if (note == 9)  c = 0xff7f00ff;
+    else if (note == 10) c = 0xffff00ff;
+    else if (note == 11) c = 0xffff007f;
+    
+    return c;
+}
+
+//==============================================================================
+
+void draw(int img, int rgb, int x, int y, int w, int h)
+{
+    int heapStart = 508;
+    setHeapInt(heapStart, img);
+    int rect = w * h;
+    if (rect > 32) return;
+    int i = 0;
+    for (int py = 0; py < h; ++py)
+	{
+		for (int px = 0; px < w; ++px)
+		{
+		    int p = getHeapBits(heapStart*8 + ((rect - 1) - i), 1);
+		    if (!p) fillPixel (rgb, x + px, y + py);
+            ++i;
+            //log(p);
+		}
+	}
+}
+
+void draw(int y0, int y1, int y2, int f, int b)
+{
+    int base = 100;
+    int b;
+    
+    setHeapInt(0,0x12345678);
+}
+void draw(int d, int c)
+{
+    if (d == 0)
+    {
+        
+        //drawX(100001000010000);
+    }
+}
+
+void drawX(int x)
+{
+    //log(int(x/100000000000000));
+
+}
+void draw(int d, int f, int b)
+{
+    int x,o;
+    if (d == 0)
+    {
+        drawX(1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0xffff0000,b);
+        //drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0xffff6600,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,0xffffff00,b);
+        //drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,0xff66ff00,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,0xff00ff00,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,5,0xff00ff66,b);
+        //drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,6,0xff00ffff,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,7,0xff0066ff,b);
+        //drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,8,0xff0000ff,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,9,0xff6600ff,b);
+        //drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,10,0xffff00ff,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,11,0xffff0066,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,12,0xffff0000,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,13,b,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,14,b,b);
+    }
+    else if (d == 1)
+    {
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,5,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,6,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,7,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,8,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,9,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,10,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,11,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,12,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,13,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,14,f,b);
+    }        
+    else if (d == 2)
+    {
+        drawX(x,x,x,x,x,x,x,8,x,x,x,x,x,x,x,0,f,b);
+        drawX(x,x,x,x,x,x,x,8,x,x,x,x,x,x,x,1,f,b);
+        drawX(x,x,x,x,x,x,x,8,x,x,x,x,x,x,x,2,f,b);
+        drawX(x,x,x,x,x,x,8,8,8,x,x,x,x,x,x,3,f,b);
+        drawX(x,x,x,x,x,x,x,8,x,x,x,x,x,x,x,4,f,b);
+        drawX(x,x,x,x,x,x,x,8,x,x,x,x,x,x,x,5,f,b);
+        drawX(x,x,x,8,x,x,x,8,x,x,x,8,x,x,x,6,f,b);
+        drawX(8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,7,f,b);
+        drawX(x,x,x,8,x,x,x,8,x,x,x,8,x,x,x,8,f,b);
+        drawX(x,x,x,x,x,x,x,8,x,x,x,x,x,x,x,9,f,b);
+        drawX(x,x,x,x,x,x,x,8,x,x,x,x,x,x,x,10,f,b);
+        drawX(x,x,x,x,x,x,8,8,8,x,x,x,x,x,x,11,f,b);
+        drawX(x,x,x,x,x,x,x,8,x,x,x,x,x,x,x,12,f,b);
+        drawX(x,x,x,x,x,x,x,8,x,x,x,x,x,x,x,13,f,b);
+        drawX(x,x,x,x,x,x,x,8,x,x,x,x,x,x,x,14,f,b);
+    }        
+    else if (d == 2)
+    {
+        drawX(o,o,o,o,o,o,o,8,o,o,o,o,o,o,o,0,f,b);
+        drawX(o,o,o,o,o,o,o,8,o,o,o,o,o,o,o,1,f,b);
+        drawX(o,o,o,o,o,o,o,8,o,o,o,o,o,o,o,2,f,b);
+        drawX(o,o,o,o,o,o,8,8,8,o,o,o,o,o,o,3,f,b);
+        drawX(o,o,o,o,o,o,o,8,o,o,o,o,o,o,o,4,f,b);
+        drawX(o,o,o,o,o,o,o,8,o,o,o,o,o,o,o,5,f,b);
+        drawX(o,o,o,8,o,o,o,8,o,o,o,8,o,o,o,6,f,b);
+        drawX(8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,7,f,b);
+        drawX(o,o,o,8,o,o,o,8,o,o,o,8,o,o,o,8,f,b);
+        drawX(o,o,o,o,o,o,o,8,o,o,o,o,o,o,o,9,f,b);
+        drawX(o,o,o,o,o,o,o,8,o,o,o,o,o,o,o,10,f,b);
+        drawX(o,o,o,o,o,o,8,8,8,o,o,o,o,o,o,11,f,b);
+        drawX(o,o,o,o,o,o,o,8,o,o,o,o,o,o,o,12,f,b);
+        drawX(o,o,o,o,o,o,o,8,o,o,o,o,o,o,o,13,f,b);
+        drawX(o,o,o,o,o,o,o,8,o,o,o,o,o,o,o,14,f,b);
+    }        
+    else if (d == 5)
+    {
+        drawX(x,x,x,x,x,x,x,0,x,x,x,x,x,x,x,0,f,b);
+        drawX(x,x,x,x,x,x,x,0,x,x,x,x,x,x,x,1,f,b);
+        drawX(x,x,x,x,x,x,x,0,x,x,x,x,x,x,x,2,f,b);
+        drawX(x,x,x,x,x,x,0,0,0,x,x,x,x,x,x,3,f,b);
+        drawX(x,x,x,x,x,x,x,0,x,x,x,x,x,x,x,4,f,b);
+        drawX(x,x,x,x,x,x,x,0,x,x,x,x,x,x,x,5,f,b);
+        drawX(x,x,x,0,x,x,x,0,x,x,x,0,x,x,x,6,f,b);
+        drawX(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,f,b);
+        drawX(x,x,x,0,x,x,x,0,x,x,x,0,x,x,x,8,f,b);
+        drawX(x,x,x,x,x,x,x,0,x,x,x,x,x,x,x,9,f,b);
+        drawX(x,x,x,x,x,x,x,0,x,x,x,x,x,x,x,10,f,b);
+        drawX(x,x,x,x,x,x,0,0,0,x,x,x,x,x,x,11,f,b);
+        drawX(x,x,x,x,x,x,x,0,x,x,x,x,x,x,x,12,f,b);
+        drawX(x,x,x,x,x,x,x,0,x,x,x,x,x,x,x,13,f,b);
+        drawX(x,x,x,x,x,x,x,0,x,x,x,x,x,x,x,14,f,b);
+    }        
+    else if (d == 6)
+    {
+        drawX(o,o,o,o,o,o,o,0,o,o,o,o,o,o,o,0,f,b);
+        drawX(o,o,o,o,o,o,o,0,o,o,o,o,o,o,o,1,f,b);
+        drawX(o,o,o,o,o,o,o,0,o,o,o,o,o,o,o,2,f,b);
+        drawX(o,o,o,o,o,o,0,0,0,o,o,o,o,o,o,3,f,b);
+        drawX(o,o,o,o,o,o,o,0,o,o,o,o,o,o,o,4,f,b);
+        drawX(o,o,o,o,o,o,o,0,o,o,o,o,o,o,o,5,f,b);
+        drawX(o,o,o,0,o,o,o,0,o,o,o,0,o,o,o,6,f,b);
+        drawX(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,f,b);
+        drawX(o,o,o,0,o,o,o,0,o,o,o,0,o,o,o,8,f,b);
+        drawX(o,o,o,o,o,o,o,0,o,o,o,o,o,o,o,9,f,b);
+        drawX(o,o,o,o,o,o,o,0,o,o,o,o,o,o,o,10,f,b);
+        drawX(o,o,o,o,o,o,0,0,0,o,o,o,o,o,o,11,f,b);
+        drawX(o,o,o,o,o,o,o,0,o,o,o,o,o,o,o,12,f,b);
+        drawX(o,o,o,o,o,o,o,0,o,o,o,o,o,o,o,13,f,b);
+        drawX(o,o,o,o,o,o,o,0,o,o,o,o,o,o,o,14,f,b);
+    }        
+    else if (d == 3)
+    {
+        drawX(0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,f,b);
+        drawX(0,0,0,1,1,0,0,1,0,0,0,0,0,0,0,1,f,b);
+        drawX(0,0,1,0,0,1,0,1,0,0,0,0,0,0,0,2,f,b);
+        drawX(0,1,1,0,0,0,1,1,1,0,0,0,0,0,0,3,f,b);
+        drawX(0,1,1,0,0,0,0,1,0,0,0,0,0,0,0,4,f,b);
+        drawX(0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,5,f,b);
+        drawX(0,1,1,1,0,0,0,1,0,0,0,1,0,0,0,6,f,b);
+        drawX(0,0,1,1,0,1,1,1,1,1,1,1,1,1,1,7,f,b);
+        drawX(0,0,1,1,0,0,0,1,0,0,0,1,0,0,0,8,f,b);
+        drawX(0,0,1,1,0,0,0,1,0,0,0,0,0,0,0,9,f,b);
+        drawX(0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,10,f,b);
+        drawX(0,0,0,0,1,0,1,1,1,0,0,0,0,0,0,11,f,b);
+        drawX(0,0,0,0,8,1,0,1,0,0,0,0,0,0,0,12,f,b);
+        drawX(0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,13,f,b);
+        drawX(0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,14,f,b);
+    }
+    else if (d == 4)
+    {
+        drawX(0,0,0,0,0,0,0,o,0,0,0,0,0,0,0,0,f,b);
+        drawX(0,0,0,0,0,0,0,o,0,0,0,0,0,0,0,1,f,b);
+        drawX(0,0,0,0,0,0,0,o,0,0,0,0,0,0,0,2,f,b);
+        drawX(0,0,0,0,0,0,o,o,o,0,0,0,0,0,0,3,f,b);
+        drawX(0,0,0,0,0,0,0,o,0,0,0,0,0,0,0,4,f,b);
+        drawX(0,0,0,0,0,0,0,o,0,0,0,0,0,0,0,5,f,b);
+        drawX(0,0,0,o,0,0,0,o,0,0,0,o,0,0,0,6,f,b);
+        drawX(o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,7,f,b);
+        drawX(0,0,0,o,0,0,0,o,0,0,0,o,0,0,0,8,f,b);
+        drawX(0,0,0,0,0,0,0,o,0,0,0,0,0,0,0,9,f,b);
+        drawX(0,0,0,0,0,0,0,o,0,0,0,0,0,0,0,10,f,b);
+        drawX(0,0,0,0,0,0,o,o,o,0,0,0,0,0,0,11,f,b);
+        drawX(0,0,0,0,0,0,0,o,0,0,0,0,0,0,0,12,f,b);
+        drawX(0,0,0,0,0,0,0,o,0,0,0,0,0,0,0,13,f,b);
+        drawX(0,0,0,0,0,0,0,o,0,0,0,0,0,0,0,14,f,b);
+    }
+    else if (d == 7)
+    {
+        drawX(x,x,x,x,x,x,x,o,x,x,x,x,x,x,x,0,f,b);
+        drawX(x,x,x,x,x,x,x,o,x,x,x,x,x,x,x,1,f,b);
+        drawX(x,x,x,x,x,x,x,o,x,x,x,x,x,x,x,2,f,b);
+        drawX(x,x,x,x,x,x,o,o,o,x,x,x,x,x,x,3,f,b);
+        drawX(x,x,x,x,x,x,x,o,x,x,x,x,x,x,x,4,f,b);
+        drawX(x,x,x,x,x,x,x,o,x,x,x,x,x,x,x,5,f,b);
+        drawX(x,x,x,o,x,x,x,o,x,x,x,o,x,x,x,6,f,b);
+        drawX(o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,7,f,b);
+        drawX(x,x,x,o,x,x,x,o,x,x,x,o,x,x,x,8,f,b);
+        drawX(x,x,x,x,x,x,x,o,x,x,x,x,x,x,x,9,f,b);
+        drawX(x,x,x,x,x,x,x,o,x,x,x,x,x,x,x,10,f,b);
+        drawX(x,x,x,x,x,x,o,o,o,x,x,x,x,x,x,11,f,b);
+        drawX(x,x,x,x,x,x,x,o,x,x,x,x,x,x,x,12,f,b);
+        drawX(x,x,x,x,x,x,x,o,x,x,x,x,x,x,x,13,f,b);
+        drawX(x,x,x,x,x,x,x,o,x,x,x,x,x,x,x,14,f,b);
+    }        
+    else if (d == 8)
+    {
+        drawX(1,1,1,1,1,1,1,x,1,1,1,1,1,1,1,0,f,b);
+        drawX(1,1,1,1,1,1,1,x,1,1,1,1,1,1,1,1,f,b);
+        drawX(1,1,1,1,1,1,1,x,1,1,1,1,1,1,1,2,f,b);
+        drawX(1,1,1,1,1,1,x,x,x,1,1,1,1,1,1,3,f,b);
+        drawX(1,1,1,1,1,1,1,x,1,1,1,1,1,1,1,4,f,b);
+        drawX(1,1,1,1,1,1,1,x,1,1,1,1,1,1,1,5,f,b);
+        drawX(1,1,1,x,1,1,1,x,1,1,1,x,1,1,1,6,f,b);
+        drawX(x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,7,f,b);
+        drawX(1,1,1,x,1,1,1,x,1,1,1,x,1,1,1,8,f,b);
+        drawX(1,1,1,1,1,1,1,x,1,1,1,1,1,1,1,9,f,b);
+        drawX(1,1,1,1,1,1,1,x,1,1,1,1,1,1,1,11,f,b);
+        drawX(1,1,1,1,1,1,x,x,x,1,1,1,1,1,1,11,f,b);
+        drawX(1,1,1,1,1,1,1,x,1,1,1,1,1,1,1,12,f,b);
+        drawX(1,1,1,1,1,1,1,x,1,1,1,1,1,1,1,13,f,b);
+        drawX(1,1,1,1,1,1,1,x,1,1,1,1,1,1,1,14,f,b);
+    }
+    else if (d == 9)
+    {
+        drawX(0,0,0,0,0,0,0,x,0,0,0,0,0,0,0,0,f,b);
+        drawX(0,0,0,0,0,0,0,x,0,0,0,0,0,0,0,1,f,b);
+        drawX(0,0,0,0,0,0,0,x,0,0,0,0,0,0,0,2,f,b);
+        drawX(0,0,0,0,0,0,x,x,x,0,0,0,0,0,0,3,f,b);
+        drawX(0,0,0,0,0,0,0,x,0,0,0,0,0,0,0,4,f,b);
+        drawX(0,0,0,0,0,0,0,x,0,0,0,0,0,0,0,5,f,b);
+        drawX(0,0,0,x,0,0,0,x,0,0,0,x,0,0,0,6,f,b);
+        drawX(x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,7,f,b);
+        drawX(0,0,0,x,0,0,0,x,0,0,0,x,0,0,0,8,f,b);
+        drawX(0,0,0,0,0,0,0,x,0,0,0,0,0,0,0,9,f,b);
+        drawX(0,0,0,0,0,0,0,x,0,0,0,0,0,0,0,10,f,b);
+        drawX(0,0,0,0,0,0,x,x,x,0,0,0,0,0,0,11,f,b);
+        drawX(0,0,0,0,0,0,0,x,0,0,0,0,0,0,0,12,f,b);
+        drawX(0,0,0,0,0,0,0,x,0,0,0,0,0,0,0,13,f,b);
+        drawX(0,0,0,0,0,0,0,x,0,0,0,0,0,0,0,14,f,b);
+    }
+      else
+    {
+        drawX(0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,f,b);
+        drawX(0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,f,b);
+        drawX(0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,2,f,b);
+        drawX(0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,3,f,b);
+        drawX(0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,4,f,b);
+        drawX(0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,5,f,b);
+        drawX(0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,6,f,b);
+        drawX(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,7,f,b);
+        drawX(0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,8,f,b);
+        drawX(0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,9,f,b);
+        drawX(0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,10,f,b);
+        drawX(0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,11,f,b);
+        drawX(0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,12,f,b);
+        drawX(0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,13,f,b);
+        drawX(0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,14,f,b);
+    }
+}
+    
+void drawX(int x0, int x1, int x2, int x3, int x4, int x5, int x6, int x7, int x8, int x9, int x10, 
+           int x11, int x12, int x13, int x14, int y, int f, int b)
+{
+    fillPixel (x0?f:b, 0, y);
+    fillPixel (x1?f:b, 1, y);
+    fillPixel (x2?f:b, 2, y);
+    fillPixel (x3?f:b, 3, y);
+    fillPixel (x4?f:b, 4, y);
+    fillPixel (x5?f:b, 5, y);
+    fillPixel (x6?f:b, 6, y);
+    fillPixel (x7?f:b, 7, y);
+    fillPixel (x8?f:b, 8, y);
+    fillPixel (x9?f:b, 9, y);
+    fillPixel (x10?f:b, 10, y);
+    fillPixel (x11?f:b, 11, y);
+    fillPixel (x12?f:b, 12, y);
+    fillPixel (x13?f:b, 13, y);
+    fillPixel (x14?f:b, 14, y);
+}
+
+void draw()
+{
+    int i = 0;
+    for (int y = 0; y < 15; ++y)
+	{
+		for (int x = 0; x < 15; ++x)
+		{
+		    int colour = isActive (i) ? 0xffff0000 : 0x00000000;
+
+            fillPixel (colour, x, y);//drawPad (padX, padY, blendARGB (Pad_getColour (padIndex), overlayColour), 0xcc);
+
+            ++i;
+		}
+	}
+}
+
+bool isActive(int i)
+{
+    bool is;
+    is = bool((i==0)?1:0);
+    return is;
+}
